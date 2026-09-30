@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Devocionales | Iglesia Bíblica Bautista de Guadalupe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Inter:wght@400;500&family=Tinos:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="page">
+  <div class="hero"><img src="images/iglesia.jpg" alt=""></div>
+  <div class="wrap">
+    <div class="spacer"></div>
+    <header class="titles">
+      <p class="iglesia">IGLESIA BÍBLICA BAUTISTA</p>
+      <p class="sub-iglesia"><span>DE GUADALUPE</span></p>
+      <div class="barra"></div>
+      <h1>DEVOCIONALES</h1>
+      <p class="lema">Alimento espiritual para cada semana</p>
+    </header>
+
+    <div class="contenedor">
+      <div class="filtros">
+        <label class="buscar">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></svg>
+          <input id="q" type="search" placeholder="Buscar devocionales..." aria-label="Buscar devocionales" autocomplete="off">
+        </label>
+        <div class="anio">
+          <select id="anio" aria-label="Año"></select>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <button type="button" class="agregar" id="btn-agregar">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Agregar</span>
+        </button>
+      </div>
+
+      <ul class="lista" id="lista"></ul>
+      <p class="vacio" id="vacio">No se encontraron devocionales.</p>
+    </div>
+  </div>
+</div>
+
+<dialog id="modal" class="modal" aria-labelledby="modal-titulo">
+  <form id="form" novalidate>
+    <h2 id="modal-titulo">Agregar devocional</h2>
+    <div class="fila">
+      <label>Desde (domingo)<input type="date" id="f-desde" required></label>
+      <label>Hasta (domingo siguiente)<input type="date" id="f-hasta" readonly tabindex="-1"></label>
+    </div>
+    <label>Título<input type="text" id="f-titulo" placeholder="Se completa con las fechas" required></label>
+    <label>Archivo PDF<input type="file" id="f-pdf" accept="application/pdf,.pdf" required></label>
+    <label id="lbl-repo" hidden>Repositorio de GitHub<input type="text" id="f-repo" placeholder="usuario/repositorio" autocomplete="off"></label>
+    <label id="lbl-token" hidden>Token de GitHub<input type="password" id="f-token" placeholder="github_pat_…" autocomplete="off"></label>
+    <p class="aviso">Se publica en GitHub para todos los visitantes. <button type="button" class="enlace" id="olvidar" hidden>Olvidar token</button></p>
+    <p class="error" id="f-error" role="alert"></p>
+    <div class="modal-botones">
+      <button type="button" class="btn pdf" id="f-cancelar">Cancelar</button>
+      <button type="submit" class="btn leer" id="f-guardar">Guardar</button>
+    </div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
