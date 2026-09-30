@@ -108,7 +108,7 @@ function pintar(){
       <div class="acciones">
         <a class="btn leer" href="${esc(d.pdf)}" target="_blank" rel="noopener">${ICONO.ojo}Leer</a>
         <span class="sep" aria-hidden="true"></span>
-        <a class="btn pdf" href="${esc(urlDescarga(d))}" download="${esc(d.titulo)}.pdf">${ICONO.desc}Descargar PDF</a>
+        <a class="btn pdf" href="${esc(urlDescarga(d))}" download="${esc(d.titulo)}.pdf" data-url="${esc(d.pdf)}" data-nombre="${esc(d.titulo)}.pdf">${ICONO.desc}Descargar PDF</a>
         <button type="button" class="borrar" data-inicio="${esc(d.inicio)}" title="Eliminar" aria-label="Eliminar ${esc(d.titulo)}">${ICONO.borrar}</button>
       </div>
     </li>`).join("");
@@ -187,6 +187,22 @@ form.addEventListener("submit", async e => {
   errorCarga = ""; modal.close(); q.value = "";
   llenarAnios(item.anio); pintar();
   aviso("Devocional publicado.");
+});
+
+/* Descarga directa: se baja el archivo y se guarda desde la propia página (el atributo download no funciona entre dominios distintos) */
+lista.addEventListener("click", async e => {
+  const a = e.target.closest("a.pdf");
+  if (!a) return;
+  e.preventDefault();
+  try {
+    const r = await fetch(a.dataset.url);
+    if (!r.ok) throw new Error();
+    const url = URL.createObjectURL(new Blob([await r.blob()], { type:"application/pdf" }));
+    const enlace = document.createElement("a");
+    enlace.href = url; enlace.download = a.dataset.nombre;
+    document.body.appendChild(enlace); enlace.click(); enlace.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+  } catch(err){ window.location.href = a.href; }   /* respaldo: descarga por parámetro de Supabase */
 });
 
 lista.addEventListener("click", async e => {
