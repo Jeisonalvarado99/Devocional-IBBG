@@ -18,7 +18,7 @@ Página estática (HTML, CSS y JS) para GitHub Pages.
 ## Agregar un devocional desde la página (botón «Agregar»)
 El botón sube el PDF a la carpeta `pdf/` y añade la semana a `data/devocionales.json` directamente en el repositorio. Después GitHub Pages se actualiza solo (1–2 minutos) y todos lo ven.
 
-Necesita un **token de GitHub** (una sola vez por navegador):
+Necesita un **token de GitHub** ( El Token es :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):
 1. GitHub → tu foto → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
 2. **Repository access → Only select repositories →** elige este repositorio.
 3. **Permissions → Repository permissions → Contents: Read and write**.
