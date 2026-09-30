@@ -1,35 +1,28 @@
 # Devocionales – Iglesia Bíblica Bautista de Guadalupe
 
-Página estática (HTML, CSS y JS) para GitHub Pages.
+Página estática para GitHub Pages. Los devocionales y los PDF se guardan en **Supabase** (gratis), por eso cualquiera que tenga el enlace puede agregar o quitar devocionales desde la página, sin tokens ni contraseñas, y se ve al instante.
 
 ## Estructura
-- `index.html` – página principal
-- `css/styles.css` – estilos
-- `js/app.js` – lógica (buscador, año, botón Agregar)
-- `data/devocionales.json` – lista de devocionales (la página la lee al abrir)
-- `pdf/` – PDF de cada semana
-- `images/` – fondo, iglesia y miniaturas
+- `index.html`, `css/styles.css`, `js/app.js` – la página
+- `images/` – fondo, iglesia y miniaturas (`images/galeria/` se reparte entre los devocionales nuevos)
+- `supabase.sql` – se ejecuta una vez en Supabase
 
-## Publicar el sitio
-1. Sube el contenido de esta carpeta (no la carpeta en sí) a un repositorio.
+## 1) Crear la base de datos (una sola vez, ~5 minutos)
+1. Entra a https://supabase.com, crea una cuenta y un **New project** (cualquier nombre y contraseña; guárdala).
+2. Cuando termine de crearse, ve a **SQL Editor → New query**, pega todo el contenido de `supabase.sql` y pulsa **Run**.
+3. Ve a **Project Settings → API** (o **API Keys**) y copia:
+   - **Project URL** (algo como `https://abcdefgh.supabase.co`)
+   - la clave **anon public** (o **publishable**)
+4. Abre `js/app.js` y pégalos arriba en `SUPABASE_URL` y `SUPABASE_KEY`.
+
+## 2) Publicar en GitHub Pages
+1. Sube el contenido de esta carpeta (no la carpeta en sí) a tu repositorio.
 2. **Settings → Pages → Deploy from a branch → `main` / `(root)` → Save**.
-3. Quedará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
 
-## Agregar un devocional desde la página (botón «Agregar»)
-El botón sube el PDF a la carpeta `pdf/` y añade la semana a `data/devocionales.json` directamente en el repositorio. Después GitHub Pages se actualiza solo (1–2 minutos) y todos lo ven.
+## Uso
+- **Agregar**: elige el domingo de inicio, revisa el título y adjunta el PDF.
+- **Papelera** (en cada tarjeta): elimina el devocional y su PDF.
+- Las semanas van de domingo a domingo. Para cambiarlo, edita `DIA_INICIO` en `js/app.js` (0 = domingo, 1 = lunes).
 
-Necesita un **token de GitHub** ( El Token es :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):
-1. GitHub → tu foto → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
-2. **Repository access → Only select repositories →** elige este repositorio.
-3. **Permissions → Repository permissions → Contents: Read and write**.
-4. Pon una fecha de vencimiento, crea el token y cópialo (`github_pat_…`).
-5. En la página pulsa **Agregar**, pega el token junto con el PDF y guarda.
-
-Notas:
-- El token se guarda solo en ese navegador. Úsalo únicamente en tu dispositivo o el de quien administre. «Olvidar token» (en la ventana Agregar) lo borra.
-- Mientras el token está guardado, cada tarjeta muestra una papelera para eliminar ese devocional del repositorio.
-- Las semanas van de **domingo a domingo**. Para cambiarlo, edita `DIA_INICIO` al inicio de `js/app.js` (0 = domingo, 1 = lunes).
-- Si el sitio no está en `usuario.github.io/repositorio`, escribe el repositorio en `REPOSITORIO` (`js/app.js`).
-
-## Agregar a mano (sin token)
-Sube el PDF a `pdf/` y agrega un bloque al inicio de `data/devocionales.json` con `titulo`, `fecha`, `inicio` (AAAA-MM-DD), `anio`, `img` y `pdf`.
+## Seguridad (léelo)
+La clave de Supabase queda visible en el código de la página (es normal y está pensada así), y las reglas de `supabase.sql` permiten agregar y borrar a quien use la página. Es decir: **la única protección es no compartir el enlace públicamente**. Si el enlace circula mucho, cualquiera con conocimientos podría borrar devocionales. Si más adelante quieres protegerlo, se puede añadir una clave de acceso.

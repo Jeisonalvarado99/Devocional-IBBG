@@ -1,18 +1,18 @@
-/* Respaldo si no se puede leer data/devocionales.json. La lista real está en data/devocionales.json */
-const RESPALDO = [];
-
+/* Iconos */
 const ICONO = {
   cal:'<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M8 3v4M16 3v4M3.5 10h17M7.5 13.5h.01M12 13.5h.01M16.5 13.5h.01M7.5 17h.01M12 17h.01M16.5 17h.01"/></svg>',
   ojo:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3.2"/></svg>',
   desc:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M4 20h16"/></svg>',
   borrar:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>'
 };
-
-
 /* Los devocionales van de domingo a domingo. 0 = domingo (1 = lunes, etc.) */
 const DIA_INICIO = 0;
-/* Opcional: si la página NO está en GitHub Pages con dirección usuario.github.io/repositorio, escribe aquí el repositorio, por ejemplo "miusuario/mi-repo" */
-const REPOSITORIO = "";
+
+/* Conexión con Supabase (ver README.md). Estos dos datos son públicos por diseño. */
+const SUPABASE_URL = "https://jwqdiectclkscimvaurd.supabase.co";   /* por ejemplo: https://abcdefgh.supabase.co */
+const SUPABASE_KEY = "sb_publishable__NdYmsujVReBNksAQXMqww_xY4yG4wm";   /* clave "anon" o "publishable" */
+const BUCKET = "pdf";
+
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Setiembre","Octubre","Noviembre","Diciembre"];
 /* Miniaturas que se reparten entre los devocionales nuevos (una distinta cada semana). Para agregar más, sube la imagen a images/galeria/ y añádela aquí */
 const IMAGENES = [
@@ -42,99 +42,48 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">"
 const $ = id => document.getElementById(id);
 const lista = $("lista"), vacio = $("vacio"), q = $("q"), sel = $("anio");
 
-/* ---------- Datos ---------- */
-let datos = [];
+/* ---------- Supabase ---------- */
+const conectado = () => !!(SUPABASE_URL && SUPABASE_KEY);
+const base = () => SUPABASE_URL.replace(/\/$/, "");
+const urlPdf = ruta => `${base()}/storage/v1/object/public/${BUCKET}/${ruta}`;
+async function sb(metodo, ruta, opciones = {}){
+  const r = await fetch(base() + ruta, { method:metodo, headers:{ apikey:SUPABASE_KEY, ...(opciones.headers || {}) }, body:opciones.cuerpo, cache:"no-store" });
+  if (!r.ok) { const e = new Error("sb"); e.status = r.status; throw e; }
+  return r;
+}
+function mensajeError(e){
+  if (e.status === 409) return "Ya existe un devocional para esa semana.";
+  if (e.status === 401 || e.status === 403) return "Sin permiso para guardar. Revisa que ejecutaste el archivo supabase.sql.";
+  if (e.status === 413) return "El PDF es demasiado grande.";
+  return "No se pudo conectar. Revisa tu internet e intenta de nuevo.";
+}
+
+let datos = [], errorCarga = "";
 async function cargarDatos(){
+  if (!conectado()) { errorCarga = "config"; return; }
   try {
-    const r = await fetch("data/devocionales.json?t=" + Date.now(), { cache:"no-store" });
-    if (!r.ok) throw new Error();
-    datos = await r.json();
-  } catch(e){ datos = RESPALDO.slice(); }
+    const r = await sb("GET", "/rest/v1/devocionales?select=*&order=inicio.desc");
+    datos = (await r.json()).map(d => ({ ...d, ruta:d.pdf, pdf:urlPdf(d.pdf) }));
+  } catch(e){ errorCarga = "red"; }
 }
 const todos = () => datos.slice().sort((a,b) => b.inicio.localeCompare(a.inicio));
 
-/* ---------- Token de GitHub (solo se guarda en este navegador) ---------- */
-const Token = {
-  get(){ try { return localStorage.getItem("dev_token") || ""; } catch(e){ return ""; } },
-  set(v){ try { localStorage.setItem("dev_token", v); } catch(e){} },
-  quitar(){ try { localStorage.removeItem("dev_token"); } catch(e){} }
-};
-function repoDetectado(){
-  if (REPOSITORIO) return REPOSITORIO;
-  const m = location.hostname.match(/^([^.]+)\.github\.io$/);
-  if (!m) { try { return localStorage.getItem("dev_repo") || ""; } catch(e){ return ""; } }
-  const carpeta = location.pathname.split("/")[1];
-  return `${m[1]}/${carpeta && !carpeta.includes(".") ? carpeta : m[1] + ".github.io"}`;
-}
-
-/* ---------- API de GitHub ---------- */
-async function gh(metodo, ruta, cuerpo){
-  const r = await fetch(`https://api.github.com/repos/${repoDetectado()}${ruta}`, {
-    method: metodo,
-    headers: { Authorization:`Bearer ${Token.get()}`, Accept:"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28" },
-    body: cuerpo ? JSON.stringify(cuerpo) : undefined
-  });
-  if (!r.ok) {
-    const e = new Error("gh"); e.status = r.status;
+async function publicar(item, pdf){
+  const ruta = `devocional-${item.inicio}.pdf`;
+  /* 1) la fila (la fecha es única, evita semanas repetidas)  2) el PDF */
+  await sb("POST", "/rest/v1/devocionales", { cuerpo:JSON.stringify({ ...item, pdf:ruta }),
+    headers:{ "Content-Type":"application/json", Prefer:"return=minimal" } });
+  try {
+    await sb("POST", `/storage/v1/object/${BUCKET}/${ruta}`, { cuerpo:pdf, headers:{ "Content-Type":"application/pdf", "x-upsert":"true" } });
+  } catch(e){
+    try { await sb("DELETE", `/rest/v1/devocionales?inicio=eq.${item.inicio}`); } catch(_){}
     throw e;
   }
-  return r.status === 204 ? null : r.json();
-}
-const ghOpcional = async (...a) => { try { return await gh(...a); } catch(e){ if (e.status === 404) return null; throw e; } };
-const aBase64 = archivo => new Promise((ok, no) => {
-  const r = new FileReader();
-  r.onload = () => ok(r.result.split(",")[1]); r.onerror = () => no(r.error); r.readAsDataURL(archivo);
-});
-const textoABase64 = s => { const b = new TextEncoder().encode(s); let x = ""; b.forEach(c => x += String.fromCharCode(c)); return btoa(x); };
-const base64ATexto = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,"")), c => c.charCodeAt(0)));
-function mensajeError(e){
-  if (e.status === 401) return "El token no es válido o ya venció. Crea uno nuevo.";
-  if (e.status === 403 || e.status === 404) return "El token no tiene permiso en este repositorio (necesita Contents: Read and write) o el repositorio no existe.";
-  if (e.status === 409 || e.status === 422) return "GitHub estaba ocupado con otro cambio. Espera unos segundos e intenta de nuevo.";
-  return "No se pudo conectar con GitHub. Revisa tu internet e intenta de nuevo.";
-}
-const pausa = ms => new Promise(ok => setTimeout(ok, ms));
-/* GitHub rechaza con 409/422 dos cambios seguidos sobre la misma rama; se repite el paso completo (incluida la lectura del sha) */
-async function conReintentos(paso){
-  for (let i = 0; ; i++) {
-    try { return await paso(); }
-    catch(e){
-      if ((e.status !== 409 && e.status !== 422) || i >= 4) throw e;
-      await pausa(1500 * (i + 1));
-    }
-  }
-}
-async function actualizarJson(cambiar, mensaje, rama){
-  return conReintentos(() => actualizarJsonUnaVez(cambiar, mensaje, rama));
-}
-async function actualizarJsonUnaVez(cambiar, mensaje, rama){
-  const ruta = "/contents/data/devocionales.json";
-  const actual = await ghOpcional("GET", `${ruta}?ref=${rama}`);
-  const lista = actual ? JSON.parse(base64ATexto(actual.content)) : [];
-  const nueva = cambiar(lista).sort((a,b) => b.inicio.localeCompare(a.inicio));
-  await gh("PUT", ruta, { message:mensaje, branch:rama, sha:actual ? actual.sha : undefined,
-    content: textoABase64(JSON.stringify(nueva, null, 2) + "\n") });
-}
-async function publicar(item, pdf){
-  const rama = (await gh("GET", "")).default_branch;
-  const rutaPdf = item.pdf;
-  const contenido = await aBase64(pdf);
-  await conReintentos(async () => {
-    const existente = await ghOpcional("GET", `/contents/${rutaPdf}?ref=${rama}`);
-    await gh("PUT", `/contents/${rutaPdf}`, { message:`Agregar PDF: ${item.titulo}`, branch:rama,
-      sha:existente ? existente.sha : undefined, content: contenido });
-  });
-  await pausa(1500);
-  await actualizarJson(l => l.filter(x => x.inicio !== item.inicio).concat(item), `Agregar devocional: ${item.titulo}`, rama);
+  return { ...item, ruta, pdf:urlPdf(ruta) };
 }
 async function eliminar(item){
-  const rama = (await gh("GET", "")).default_branch;
-  await actualizarJson(l => l.filter(x => x.inicio !== item.inicio), `Eliminar devocional: ${item.titulo}`, rama);
-  await pausa(1500);
-  await conReintentos(async () => {
-    const pdf = await ghOpcional("GET", `/contents/${item.pdf}?ref=${rama}`);
-    if (pdf) await gh("DELETE", `/contents/${item.pdf}`, { message:`Eliminar PDF: ${item.titulo}`, sha:pdf.sha, branch:rama });
-  });
+  await sb("DELETE", `/rest/v1/devocionales?inicio=eq.${item.inicio}`);
+  try { await sb("DELETE", `/storage/v1/object/${BUCKET}/${item.ruta}`); } catch(e){}
 }
 
 /* ---------- Lista ---------- */
@@ -147,7 +96,7 @@ function llenarAnios(elegir){
   sel.value = anios.includes(actual) ? actual : anios[0];
 }
 function pintar(){
-  const t = norm(q.value.trim()), a = Number(sel.value), admin = !!Token.get();
+  const t = norm(q.value.trim()), a = Number(sel.value);
   const items = todos().filter(d => d.anio === a && norm(d.titulo + " " + d.fecha).includes(t));
   lista.innerHTML = items.map(d => `
     <li class="tarjeta">
@@ -157,21 +106,23 @@ function pintar(){
         <a class="btn leer" href="${esc(d.pdf)}" target="_blank" rel="noopener">${ICONO.ojo}Leer</a>
         <span class="sep" aria-hidden="true"></span>
         <a class="btn pdf" href="${esc(d.pdf)}" download="${esc(d.titulo)}.pdf">${ICONO.desc}Descargar PDF</a>
-        ${admin ? `<button type="button" class="borrar" data-inicio="${esc(d.inicio)}" title="Eliminar" aria-label="Eliminar ${esc(d.titulo)}">${ICONO.borrar}</button>` : ""}
+        <button type="button" class="borrar" data-inicio="${esc(d.inicio)}" title="Eliminar" aria-label="Eliminar ${esc(d.titulo)}">${ICONO.borrar}</button>
       </div>
     </li>`).join("");
-  vacio.textContent = datos.length ? "No se encontraron devocionales." : "Aún no hay devocionales. Pulsa «Agregar» para publicar el primero.";
+  vacio.textContent = errorCarga === "config" ? "Falta conectar la base de datos (ver README.md)."
+    : errorCarga === "red" ? "No se pudieron cargar los devocionales. Recarga la página."
+    : datos.length ? "No se encontraron devocionales."
+    : "Aún no hay devocionales. Pulsa «Agregar» para publicar el primero.";
   vacio.classList.toggle("on", items.length === 0);
 }
 function aviso(texto){
   const t = $("toast"); t.textContent = texto; t.classList.add("on");
-  clearTimeout(aviso.id); aviso.id = setTimeout(() => t.classList.remove("on"), 7000);
+  clearTimeout(aviso.id); aviso.id = setTimeout(() => t.classList.remove("on"), 6000);
 }
 
 /* ---------- Ventana "Agregar" ---------- */
 const modal = $("modal"), form = $("form"), fDesde = $("f-desde"), fHasta = $("f-hasta"),
-      fTitulo = $("f-titulo"), fPdf = $("f-pdf"), fError = $("f-error"),
-      fToken = $("f-token"), fRepo = $("f-repo"), bGuardar = $("f-guardar");
+      fTitulo = $("f-titulo"), fPdf = $("f-pdf"), fError = $("f-error"), bGuardar = $("f-guardar");
 let tituloEditado = false;
 
 function textos(desde, hasta){
@@ -189,19 +140,13 @@ function sugerirTitulo(){
   if (tituloEditado || !fDesde.value || !fHasta.value) return;
   fTitulo.value = textos(fDesde.value, fHasta.value).titulo;
 }
-function prepararConexion(){
-  const conToken = !!Token.get();
-  $("lbl-token").hidden = conToken;
-  $("lbl-repo").hidden = !!repoDetectado();
-  $("olvidar").hidden = !conToken;
-}
 $("btn-agregar").addEventListener("click", () => {
+  if (!conectado()) return aviso("Primero hay que conectar la base de datos (ver README.md).");
   form.reset(); fHasta.value = ""; tituloEditado = false; fError.textContent = "";
-  prepararConexion(); modal.showModal();
+  modal.showModal();
 });
 $("f-cancelar").addEventListener("click", () => modal.close());
 modal.addEventListener("click", e => { if (e.target === modal) modal.close(); });
-$("olvidar").addEventListener("click", () => { Token.quitar(); prepararConexion(); llenarAnios(); pintar(); });
 
 fDesde.addEventListener("change", () => {
   fHasta.value = "";
@@ -229,44 +174,29 @@ form.addEventListener("submit", async e => {
   if (!pdf) return fError.textContent = "Selecciona el archivo PDF.";
   if (pdf.type !== "application/pdf" && !/\.pdf$/i.test(pdf.name)) return fError.textContent = "El archivo debe ser un PDF.";
   if (pdf.size > 25 * 1024 * 1024) return fError.textContent = "El PDF pesa más de 25 MB. Reduce su tamaño.";
-  if (!Token.get()) {
-    if (!fToken.value.trim()) return fError.textContent = "Pega el token de GitHub para poder publicar.";
-    Token.set(fToken.value.trim());
-  }
-  if (!repoDetectado()) {
-    const r = fRepo.value.trim();
-    if (!/^[\w.-]+\/[\w.-]+$/.test(r)) return fError.textContent = "Escribe el repositorio como usuario/repositorio.";
-    try { localStorage.setItem("dev_repo", r); } catch(err){}
-  }
   const { fecha } = textos(fDesde.value, fHasta.value);
   const item = { titulo: fTitulo.value.trim(), fecha, inicio: fDesde.value, anio: Number(fDesde.value.slice(0,4)),
-    img: IMAGENES[Math.floor(Date.parse(fDesde.value) / 604800000) % IMAGENES.length], pdf: `pdf/devocional-${fDesde.value}.pdf` };
+    img: IMAGENES[Math.floor(Date.parse(fDesde.value) / 604800000) % IMAGENES.length] };
   bGuardar.disabled = true; bGuardar.textContent = "Publicando…";
-  try { await publicar(item, pdf); }
-  catch(err){
-    if (err.status === 401) Token.quitar();
-    fError.textContent = mensajeError(err); prepararConexion();
-    bGuardar.disabled = false; bGuardar.textContent = "Guardar"; return;
-  }
+  try { datos.push(await publicar(item, pdf)); }
+  catch(err){ fError.textContent = mensajeError(err); bGuardar.disabled = false; bGuardar.textContent = "Guardar"; return; }
   bGuardar.disabled = false; bGuardar.textContent = "Guardar";
-  datos.push({ ...item, pdf: URL.createObjectURL(pdf) });   /* se ve al instante; el archivo definitivo queda en el repositorio */
-  modal.close(); q.value = "";
+  errorCarga = ""; modal.close(); q.value = "";
   llenarAnios(item.anio); pintar();
-  aviso("Publicado en GitHub. En 1 o 2 minutos lo verá todo el mundo.");
+  aviso("Devocional publicado.");
 });
 
 lista.addEventListener("click", async e => {
   const b = e.target.closest(".borrar");
   if (!b) return;
   const item = datos.find(d => d.inicio === b.dataset.inicio);
-  if (!item || !confirm(`¿Eliminar "${item.titulo}" del repositorio?`)) return;
+  if (!item || !confirm(`¿Eliminar "${item.titulo}"? Esta acción no se puede deshacer.`)) return;
   b.disabled = true;
-  const rutaPdf = item.pdf.startsWith("blob:") ? `pdf/devocional-${item.inicio}.pdf` : item.pdf;
-  try { await eliminar({ ...item, pdf: rutaPdf }); }
+  try { await eliminar(item); }
   catch(err){ b.disabled = false; return aviso(mensajeError(err)); }
   datos = datos.filter(d => d.inicio !== item.inicio);
   llenarAnios(); pintar();
-  aviso("Eliminado del repositorio. Se actualizará para todos en 1 o 2 minutos.");
+  aviso("Devocional eliminado.");
 });
 
 q.addEventListener("input", pintar);
