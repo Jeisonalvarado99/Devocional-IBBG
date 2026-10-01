@@ -7,9 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Inter:wght@400;500&family=Tinos:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body>
+<div class="fondo" id="fondo" aria-hidden="true"></div>
 <div class="page">
   <div class="hero"><img src="images/iglesia.jpg" alt=""></div>
   <div class="wrap">
@@ -63,6 +64,22 @@
 </dialog>
 <div class="toast" id="toast" role="status"></div>
 
+<script>
+/* Difumina el fondo mientras se hace scroll (desaparece del todo al bajar ~80 % de su alto, o casi medio alto de pantalla en celular) */
+(function(){
+  var f=document.getElementById("fondo"), root=document.documentElement, ticking=false;
+  function actualizar(){
+    ticking=false;
+    var alto=f.offsetHeight||1;
+    var dist=Math.max(alto*0.8,window.innerHeight*0.45);
+    var v=1-(window.pageYOffset||root.scrollTop||0)/dist;
+    root.style.setProperty("--fade", Math.max(0,Math.min(1,v)).toFixed(3));
+  }
+  window.addEventListener("scroll",function(){ if(!ticking){ ticking=true; requestAnimationFrame(actualizar); } },{passive:true});
+  window.addEventListener("resize",actualizar);
+  actualizar();
+})();
+</script>
 <script src="js/app.js"></script>
 </body>
 </html>
