@@ -98,9 +98,26 @@ function llenarAnios(elegir){
 /* El atributo download se ignora en enlaces de otro dominio; Supabase pide la descarga con ?download=nombre */
 const urlDescarga = d => `${d.pdf}?download=${encodeURIComponent(d.titulo + ".pdf")}`;
 
+/* Orden por fecha: "desc" = más recientes primero (por defecto), "asc" = más antiguos primero */
+let orden = "desc";
+const bOrden = $("btn-orden");
+const ICONO_ORDEN = {
+  desc:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M14 6h7M14 12h5M14 18h3"/></svg>',
+  asc:'<svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V4M3.5 7.5 7 4l3.5 3.5M14 6h3M14 12h5M14 18h7"/></svg>'
+};
+function pintarOrden(){
+  const nuevos = orden === "desc";
+  bOrden.querySelector(".orden-ico").innerHTML = ICONO_ORDEN[orden];
+  bOrden.querySelector(".orden-txt").textContent = nuevos ? "Recientes" : "Antiguos";
+  bOrden.title = bOrden.ariaLabel = nuevos ? "Orden por fecha: más recientes primero (clic para invertir)" : "Orden por fecha: más antiguos primero (clic para invertir)";
+}
+bOrden.addEventListener("click", () => { orden = orden === "desc" ? "asc" : "desc"; pintarOrden(); pintar(); });
+pintarOrden();
+
 function pintar(){
   const t = norm(q.value.trim()), a = Number(sel.value);
   const items = todos().filter(d => d.anio === a && norm(d.titulo + " " + d.fecha).includes(t));
+  if (orden === "asc") items.reverse();   /* todos() ya viene del más reciente al más antiguo */
   lista.innerHTML = items.map(d => `
     <li class="tarjeta">
       <div class="miniatura"><img src="${esc(d.img)}" alt="" loading="lazy"></div>
@@ -217,6 +234,11 @@ lista.addEventListener("click", async e => {
   llenarAnios(); pintar();
   aviso("Devocional eliminado.");
 });
+
+/* En celular el buscador es más angosto: se acorta el texto de ayuda para que se lea completo */
+const vistaCompacta = window.matchMedia("(max-aspect-ratio:1/1)");
+const textoBuscar = () => { q.placeholder = vistaCompacta.matches ? "Buscar" : "Buscar devocionales..."; };
+vistaCompacta.addEventListener("change", textoBuscar); textoBuscar();
 
 q.addEventListener("input", pintar);
 sel.addEventListener("change", pintar);
