@@ -69,11 +69,13 @@ input:focus-visible,select:focus-visible,a:focus-visible{outline:.19rem solid #d
 /* Vista compacta (ventana vertical: celular, tablet vertical) */
 /* Se elige por proporción de la ventana (vertical vs horizontal), que NO cambia con el zoom */
 /* Botón Agregar (mismo estilo que el selector de año y los botones Leer) */
-.agregar{display:inline-flex;align-items:center;justify-content:center;gap:.7rem;width:10.5rem;height:3.25rem;flex:none;cursor:pointer;
+.agregar,.orden{display:inline-flex;align-items:center;justify-content:center;gap:.7rem;width:10.5rem;height:3.25rem;flex:none;cursor:pointer;
   border-radius:.65rem;border:.07rem solid var(--vino-borde);background:var(--vino);color:#fff;font:400 1.35rem var(--sans);transition:filter .15s}
-.agregar:hover{filter:brightness(1.08)}
-.agregar svg{width:1.4rem;height:1.4rem;stroke:#fff;flex:none}
-.agregar:focus-visible,.btn:focus-visible{outline:.19rem solid #d99a3d;outline-offset:.12rem}
+.agregar:hover,.orden:hover{filter:brightness(1.08)}
+.orden{width:11.5rem;gap:.65rem}
+.agregar svg,.orden svg{width:1.4rem;height:1.4rem;stroke:#fff;flex:none}
+.orden-ico{display:inline-flex}
+.agregar:focus-visible,.orden:focus-visible,.btn:focus-visible{outline:.19rem solid #d99a3d;outline-offset:.12rem}
 .borrar{flex:none;width:3.125rem;height:3.125rem;margin-left:.8rem;border:0;border-radius:.5rem;background:#ececec;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .borrar svg{width:1.5rem;height:1.5rem;stroke:var(--vino)}
 .borrar:hover{background:#e3d3d3}
@@ -115,8 +117,8 @@ input:focus-visible,select:focus-visible,a:focus-visible{outline:.19rem solid #d
   .buscar input{padding-left:3.2rem}
   .buscar svg{left:1rem;width:1.3rem;height:1.3rem}
   .anio{width:6.3rem}
-  .agregar{width:3rem;height:3rem;border-radius:.65rem}
-  .agregar span{display:none}
+  .agregar,.orden{width:3rem;height:3rem;border-radius:.65rem}
+  .agregar span,.orden-txt{display:none}
   .borrar{width:2.7rem;height:2.7rem;margin-left:0}
   .fila{grid-template-columns:1fr}
   .modal h2{font-size:1.4rem}
