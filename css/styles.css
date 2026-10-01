@@ -7,12 +7,14 @@
 /* Todo se mide en rem y 1rem es un % del ancho de la ventana: al hacer zoom (25%-500%) el ancho útil en px CSS cambia en la misma proporción, así que el tamaño real de textos y elementos no cambia */
 html{font-size:1.0417vw;-webkit-text-size-adjust:100%}
 body{font-family:var(--sans);color:var(--tinta);background:var(--crema);-webkit-font-smoothing:antialiased}
-.page{position:relative;overflow:hidden;min-height:100vh;padding-bottom:2.5rem;background-color:var(--crema);
+.page{position:relative;z-index:1;overflow:hidden;min-height:100vh;padding-bottom:2.5rem}
+/* Fondo: capa FIJA arriba de la ventana, con la proporción original de fondo.jpg (1536x1024). No depende del largo de la página ni del año elegido: no se estira nunca. Al hacer scroll solo se difumina (la opacidad la controla un pequeño script en index.html mediante --fade) */
+.fondo{position:fixed;top:0;left:0;width:100%;aspect-ratio:1536/1024;z-index:0;pointer-events:none;opacity:var(--fade,1);will-change:opacity;
   background-image:
     linear-gradient(180deg,transparent 78%,rgba(247,240,234,.85) 92%,var(--crema) 100%),
     radial-gradient(ellipse 60% 34% at 50% 12%,rgba(255,244,235,.62),transparent 85%),
     url("../images/fondo.jpg");
-  background-repeat:no-repeat;background-size:100% 100%,100% 100%,100% 100%,100% auto;background-position:top}
+  background-repeat:no-repeat;background-size:100% 100%;background-position:top}
 .hero{position:absolute;top:0;left:0;width:100%;pointer-events:none;
   -webkit-mask-image:linear-gradient(90deg,transparent 13%,#000 24%,#000 76%,transparent 87%),linear-gradient(#000 90%,transparent);
   mask-image:linear-gradient(90deg,transparent 13%,#000 24%,#000 76%,transparent 87%),linear-gradient(#000 90%,transparent);
