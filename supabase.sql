@@ -17,7 +17,7 @@ drop policy if exists "agregar" on public.devocionales;
 drop policy if exists "borrar"  on public.devocionales;
 create policy "ver"     on public.devocionales for select to anon using (true);
 create policy "agregar" on public.devocionales for insert to anon with check (true);
-create policy "borrar"  on public.devocionales for delete to anon using (true);
+-- (Borrar ya no es libre: se hace con contraseña, ver proteger-borrado.sql)
 
 -- Carpeta pública para los PDF
 insert into storage.buckets (id, name, public) values ('pdf', 'pdf', true)
@@ -30,4 +30,3 @@ drop policy if exists "pdf borrar"  on storage.objects;
 create policy "pdf ver"     on storage.objects for select to anon using (bucket_id = 'pdf');
 create policy "pdf subir"   on storage.objects for insert to anon with check (bucket_id = 'pdf');
 create policy "pdf cambiar" on storage.objects for update to anon using (bucket_id = 'pdf') with check (bucket_id = 'pdf');
-create policy "pdf borrar"  on storage.objects for delete to anon using (bucket_id = 'pdf');
