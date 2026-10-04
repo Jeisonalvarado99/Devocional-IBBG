@@ -53,6 +53,7 @@ async function sb(metodo, ruta, opciones = {}){
   return r;
 }
 function mensajeError(e){
+  if (e.status === "sql") return "Falta ejecutar proteger-borrado.sql en Supabase (ver README.md).";
   if (e.status === 409) return "Ya existe un devocional para esa semana.";
   if (e.status === 401 || e.status === 403) return "Sin permiso para guardar. Revisa que ejecutaste el archivo supabase.sql.";
   if (e.status === 413) return "El PDF es demasiado grande.";
@@ -82,9 +83,13 @@ async function publicar(item, pdf){
   }
   return { ...item, ruta, pdf:urlPdf(ruta) };
 }
-async function eliminar(item){
-  await sb("DELETE", `/rest/v1/devocionales?inicio=eq.${item.inicio}`);
-  try { await sb("DELETE", `/storage/v1/object/${BUCKET}/${item.ruta}`); } catch(e){}
+/* Borrar exige contraseña: la revisa el servidor (función borrar_devocional de proteger-borrado.sql), no esta página */
+async function eliminar(item, clave){
+  let r;
+  try {
+    r = await sb("POST", "/rest/v1/rpc/borrar_devocional", { cuerpo:JSON.stringify({ p_inicio:item.inicio, p_clave:clave }), headers:{ "Content-Type":"application/json" } });
+  } catch(e){ if (e.status === 404) e.status = "sql"; throw e; }
+  if ((await r.json()) !== "ok") { const e = new Error("clave"); e.clave = true; throw e; }
 }
 
 /* ---------- Lista ---------- */
@@ -238,18 +243,38 @@ form.addEventListener("submit", async e => {
   } catch(err){ window.location.href = a.href; }   /* respaldo: descarga por parámetro de Supabase */
 }));
 
-[lista, destacadoLista].forEach(c => c.addEventListener("click", async e => {
+/* Eliminar: abre una ventana que pide la contraseña */
+const mBorrar = $("modal-borrar"), fBorrar = $("form-borrar"), bClave = $("b-clave"), bError = $("b-error"),
+      bTexto = $("borrar-texto"), bEliminar = $("b-eliminar");
+let porBorrar = null;
+[lista, destacadoLista].forEach(c => c.addEventListener("click", e => {
   const b = e.target.closest(".borrar");
   if (!b) return;
   const item = datos.find(d => d.inicio === b.dataset.inicio);
-  if (!item || !confirm(`¿Eliminar "${item.titulo}"? Esta acción no se puede deshacer.`)) return;
-  b.disabled = true;
-  try { await eliminar(item); }
-  catch(err){ b.disabled = false; return aviso(mensajeError(err)); }
-  datos = datos.filter(d => d.inicio !== item.inicio);
-  llenarAnios(); pintar();
-  aviso("Devocional eliminado.");
+  if (!item) return;
+  porBorrar = item;
+  bTexto.textContent = `Se eliminará «${item.titulo}». Esta acción no se puede deshacer.`;
+  bClave.value = ""; bError.textContent = ""; bEliminar.disabled = false; bEliminar.textContent = "Eliminar";
+  mBorrar.showModal(); bClave.focus();
 }));
+$("b-cancelar").addEventListener("click", () => mBorrar.close());
+mBorrar.addEventListener("close", () => { bClave.value = ""; porBorrar = null; });
+fBorrar.addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!porBorrar) return;
+  if (!bClave.value) { bError.textContent = "Escribe la contraseña."; bClave.focus(); return; }
+  bEliminar.disabled = true; bEliminar.textContent = "Eliminando…"; bError.textContent = "";
+  const item = porBorrar;
+  try { await eliminar(item, bClave.value); }
+  catch(err){
+    bEliminar.disabled = false; bEliminar.textContent = "Eliminar";
+    bError.textContent = err.clave ? "Contraseña incorrecta." : mensajeError(err);
+    bClave.focus(); bClave.select(); return;
+  }
+  datos = datos.filter(d => d.inicio !== item.inicio);
+  mBorrar.close(); llenarAnios(); pintar();
+  aviso("Devocional eliminado.");
+});
 
 /* En celular el buscador es más angosto: se acorta el texto de ayuda para que se lea completo */
 const vistaCompacta = window.matchMedia("(max-aspect-ratio:1/1)");
