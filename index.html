@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Inter:wght@400;500&family=Tinos:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=4">
+<link rel="stylesheet" href="css/styles.css?v=6">
 </head>
 <body>
 <div class="fondo" id="fondo" aria-hidden="true"></div>
@@ -24,6 +24,10 @@
     </header>
 
     <div class="contenedor">
+      <section class="destacado" id="destacado" aria-labelledby="destacado-titulo" hidden>
+        <h2 id="destacado-titulo">Devocional de esta semana</h2>
+        <ul class="lista" id="destacado-lista"></ul>
+      </section>
       <div class="filtros">
         <label class="buscar">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></svg>
@@ -84,6 +88,6 @@
   actualizar();
 })();
 </script>
-<script src="js/app.js?v=4"></script>
+<script src="js/app.js?v=5"></script>
 </body>
 </html>
