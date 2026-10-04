@@ -40,7 +40,8 @@ const IMAGENES = [
 const norm = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const $ = id => document.getElementById(id);
-const lista = $("lista"), vacio = $("vacio"), q = $("q"), sel = $("anio");
+const lista = $("lista"), vacio = $("vacio"), q = $("q"), sel = $("anio"),
+      destacado = $("destacado"), destacadoLista = $("destacado-lista");
 
 /* ---------- Supabase ---------- */
 const conectado = () => !!(SUPABASE_URL && SUPABASE_KEY);
@@ -98,6 +99,27 @@ function llenarAnios(elegir){
 /* El atributo download se ignora en enlaces de otro dominio; Supabase pide la descarga con ?download=nombre */
 const urlDescarga = d => `${d.pdf}?download=${encodeURIComponent(d.titulo + ".pdf")}`;
 
+/* Fecha de hoy (hora local del visitante) en formato AAAA-MM-DD */
+const hoyISO = () => { const f = new Date(); return `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,"0")}-${String(f.getDate()).padStart(2,"0")}`; };
+/* El devocional de "esta semana" es el que empieza el domingo más reciente (y termina el domingo siguiente, cuando empieza el otro) */
+const esActual = d => { const h = hoyISO(); return d.inicio <= h && h < masSieteDias(d.inicio); };
+const actual = () => datos.find(esActual);
+
+function tarjeta(d, marcar){
+  const es = marcar && esActual(d);
+  return `
+    <li class="tarjeta${es ? " actual" : ""}"${es ? ' aria-current="true"' : ""}>
+      <div class="miniatura"><img src="${esc(d.img)}" alt="" loading="lazy">${es ? '<span class="insignia">Esta semana</span>' : ""}</div>
+      <div class="texto"><h2>${esc(d.titulo)}</h2><p class="fecha">${ICONO.cal}<span>${esc(d.fecha)}</span></p></div>
+      <div class="acciones">
+        <a class="btn leer" href="${esc(d.pdf)}" target="_blank" rel="noopener">${ICONO.ojo}Leer</a>
+        <span class="sep" aria-hidden="true"></span>
+        <a class="btn pdf" href="${esc(urlDescarga(d))}" download="${esc(d.titulo)}.pdf" data-url="${esc(d.pdf)}" data-nombre="${esc(d.titulo)}.pdf">${ICONO.desc}Descargar PDF</a>
+        <button type="button" class="borrar" data-inicio="${esc(d.inicio)}" title="Eliminar" aria-label="Eliminar ${esc(d.titulo)}">${ICONO.borrar}</button>
+      </div>
+    </li>`;
+}
+
 /* Orden por fecha: "desc" = más recientes primero (por defecto), "asc" = más antiguos primero */
 let orden = "desc";
 const bOrden = $("btn-orden");
@@ -118,17 +140,11 @@ function pintar(){
   const t = norm(q.value.trim()), a = Number(sel.value);
   const items = todos().filter(d => d.anio === a && norm(d.titulo + " " + d.fecha).includes(t));
   if (orden === "asc") items.reverse();   /* todos() ya viene del más reciente al más antiguo */
-  lista.innerHTML = items.map(d => `
-    <li class="tarjeta">
-      <div class="miniatura"><img src="${esc(d.img)}" alt="" loading="lazy"></div>
-      <div class="texto"><h2>${esc(d.titulo)}</h2><p class="fecha">${ICONO.cal}<span>${esc(d.fecha)}</span></p></div>
-      <div class="acciones">
-        <a class="btn leer" href="${esc(d.pdf)}" target="_blank" rel="noopener">${ICONO.ojo}Leer</a>
-        <span class="sep" aria-hidden="true"></span>
-        <a class="btn pdf" href="${esc(urlDescarga(d))}" download="${esc(d.titulo)}.pdf" data-url="${esc(d.pdf)}" data-nombre="${esc(d.titulo)}.pdf">${ICONO.desc}Descargar PDF</a>
-        <button type="button" class="borrar" data-inicio="${esc(d.inicio)}" title="Eliminar" aria-label="Eliminar ${esc(d.titulo)}">${ICONO.borrar}</button>
-      </div>
-    </li>`).join("");
+  lista.innerHTML = items.map(d => tarjeta(d, true)).join("");
+  /* Bloque fijo arriba con el devocional de esta semana (no depende del buscador, del año elegido ni del orden) */
+  const hoy = actual();
+  destacado.hidden = !hoy;
+  destacadoLista.innerHTML = hoy ? tarjeta(hoy, true) : "";
   vacio.textContent = errorCarga === "config" ? "Falta conectar la base de datos (ver README.md)."
     : errorCarga === "red" ? "No se pudieron cargar los devocionales. Recarga la página."
     : datos.length ? "No se encontraron devocionales."
@@ -207,7 +223,7 @@ form.addEventListener("submit", async e => {
 });
 
 /* Descarga directa: se baja el archivo y se guarda desde la propia página (el atributo download no funciona entre dominios distintos) */
-lista.addEventListener("click", async e => {
+[lista, destacadoLista].forEach(c => c.addEventListener("click", async e => {
   const a = e.target.closest("a.pdf");
   if (!a) return;
   e.preventDefault();
@@ -220,9 +236,9 @@ lista.addEventListener("click", async e => {
     document.body.appendChild(enlace); enlace.click(); enlace.remove();
     setTimeout(() => URL.revokeObjectURL(url), 15000);
   } catch(err){ window.location.href = a.href; }   /* respaldo: descarga por parámetro de Supabase */
-});
+}));
 
-lista.addEventListener("click", async e => {
+[lista, destacadoLista].forEach(c => c.addEventListener("click", async e => {
   const b = e.target.closest(".borrar");
   if (!b) return;
   const item = datos.find(d => d.inicio === b.dataset.inicio);
@@ -233,7 +249,7 @@ lista.addEventListener("click", async e => {
   datos = datos.filter(d => d.inicio !== item.inicio);
   llenarAnios(); pintar();
   aviso("Devocional eliminado.");
-});
+}));
 
 /* En celular el buscador es más angosto: se acorta el texto de ayuda para que se lea completo */
 const vistaCompacta = window.matchMedia("(max-aspect-ratio:1/1)");
@@ -242,4 +258,11 @@ vistaCompacta.addEventListener("change", textoBuscar); textoBuscar();
 
 q.addEventListener("input", pintar);
 sel.addEventListener("change", pintar);
-(async () => { await cargarDatos(); llenarAnios(); pintar(); })();
+(async () => {
+  await cargarDatos();
+  const hoy = actual();
+  llenarAnios(hoy ? hoy.anio : undefined);   /* abre en el año del devocional de esta semana */
+  pintar();
+})();
+/* Si la página queda abierta y pasa el domingo, al volver a ella se actualiza lo destacado */
+document.addEventListener("visibilitychange", () => { if (!document.hidden && datos.length) pintar(); });
