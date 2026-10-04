@@ -63,6 +63,17 @@ input:focus-visible,select:focus-visible,a:focus-visible{outline:.19rem solid #d
 .leer svg{stroke:#fff}
 .pdf{width:14rem;border-radius:.5rem;background:#ececec;color:#1f1815}
 .pdf svg{stroke:#1f1815}
+/* Devocional de la semana */
+.destacado{margin-bottom:1.4rem}
+.destacado[hidden]{display:none}
+.destacado>h2{display:inline-block;font:600 1.15rem var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--vino);margin:0 0 .7rem .3rem;padding:.3rem 1rem;border-radius:2rem;background:rgba(253,250,247,.94);box-shadow:0 .06rem .35rem rgba(0,0,0,.18)}
+.destacado .lista{margin-top:0}
+.tarjeta.actual{position:relative;box-shadow:0 0 0 .28rem #d99a3d,0 0 0 .5rem rgba(217,154,61,.35),0 .4rem 1.7rem rgba(122,22,22,.32);background:linear-gradient(90deg,#ffeccb,#fffaf2 45%)}
+.tarjeta.actual::before{content:"";position:absolute;left:0;top:0;bottom:0;width:.55rem;border-radius:1rem 0 0 1rem;background:var(--vino)}
+.tarjeta.actual .texto h2{color:var(--vino)}
+.miniatura{position:relative}
+.insignia{position:absolute;top:.5rem;left:.5rem;padding:.3rem .95rem;border-radius:2rem;background:var(--vino);color:#fff;border:.1rem solid #f1c36d;font:600 1rem var(--sans);letter-spacing:.04em;box-shadow:0 .06rem .4rem rgba(0,0,0,.4)}
+.insignia::before{content:"★ ";color:#f1c36d}
 .vacio{display:none;text-align:center;padding:2rem 1rem;border-radius:1rem;background:rgba(253,250,247,.94);font-size:1.2rem;color:var(--gris)}
 .vacio.on{display:block}
 
@@ -127,6 +138,8 @@ input:focus-visible,select:focus-visible,a:focus-visible{outline:.19rem solid #d
   .lista{margin-top:1rem;gap:.7rem}
   .tarjeta{display:grid;grid-template-columns:clamp(7.4rem,24vw,11rem) 1fr;height:auto;gap:.9rem;padding:.9rem;align-items:center}
   .miniatura{width:100%;border-radius:.6rem}
+  .insignia{font-size:.7rem;padding:.15rem .5rem;top:.35rem;left:.35rem}
+  .destacado>h2{font-size:.85rem;padding:.2rem .75rem;margin-bottom:.6rem}
   .texto{margin-left:0}
   .texto h2{font-size:clamp(1.05rem,2.6vw,1.3rem)}
   .fecha{font-size:clamp(.85rem,2vw,1rem);gap:.45rem;margin-top:.35rem}
