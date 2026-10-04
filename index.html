@@ -70,6 +70,18 @@
     </div>
   </form>
 </dialog>
+<dialog id="modal-borrar" class="modal" aria-labelledby="borrar-titulo">
+  <form id="form-borrar" novalidate>
+    <h2 id="borrar-titulo">Eliminar devocional</h2>
+    <p class="aviso" id="borrar-texto"></p>
+    <label>Contraseña<input type="password" id="b-clave" autocomplete="current-password" required></label>
+    <p class="error" id="b-error" role="alert"></p>
+    <div class="modal-botones">
+      <button type="button" class="btn pdf" id="b-cancelar">Cancelar</button>
+      <button type="submit" class="btn leer" id="b-eliminar">Eliminar</button>
+    </div>
+  </form>
+</dialog>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -88,6 +100,6 @@
   actualizar();
 })();
 </script>
-<script src="js/app.js?v=5"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>
